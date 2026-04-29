@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Réserver une visite — Confiserie Afchain</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #f5f4f0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 2rem 1rem; }
+  .header { text-align: center; margin-bottom: 2rem; }
+  .header h1 { font-size: 22px; font-weight: 500; color: #1a1a1a; }
+  .header p { font-size: 14px; color: #6b6b6b; margin-top: 4px; }
+  .card { background: #fff; border: 0.5px solid rgba(0,0,0,.12); border-radius: 12px; padding: 1.5rem; width: 100%; max-width: 640px; }
+  .step-dots { display: flex; gap: 6px; margin-bottom: 1.5rem; }
+  .dot { height: 3px; border-radius: 2px; flex: 1; background: rgba(0,0,0,.12); transition: background .3s; }
+  .dot.on { background: #185FA5; }
+  .step-lbl { font-size: 11px; color: #999; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 4px; }
+  .step-title { font-size: 18px; font-weight: 500; color: #1a1a1a; margin-bottom: 1.25rem; }
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: .75rem; }
+  .cal-nav button { background: none; border: 0.5px solid rgba(0,0,0,.25); border-radius: 6px; padding: 5px 12px; cursor: pointer; font-size: 13px; color: #1a1a1a; }
+  .cal-nav button:hover { background: #f5f4f0; }
+  .month-lbl { font-size: 14px; font-weight: 500; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-bottom: 1.25rem; }
+  .cal-head { text-align: center; font-size: 11px; color: #999; padding: 3px 0; }
+  .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 13px; cursor: pointer; color: #1a1a1a; border: 0.5px solid transparent; transition: all .15s; }
+  .cal-day:hover:not(.dis):not(.emp) { background: #f5f4f0; border-color: rgba(0,0,0,.2); }
+  .cal-day.sel { background: #185FA5; color: #fff; }
+  .cal-day.dis { color: #ccc; cursor: default; }
+  .cal-day.emp { cursor: default; }
+  .slots-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.25rem; }
+  .slot { padding: 10px 8px; border: 0.5px solid rgba(0,0,0,.12); border-radius: 8px; text-align: center; cursor: pointer; font-size: 13px; transition: all .15s; background: #fff; }
+  .slot:hover:not(.dis) { border-color: rgba(0,0,0,.25); background: #f5f4f0; }
+  .slot.sel { border: 1.5px solid #185FA5; color: #185FA5; background: #E6F1FB; }
+  .slot.dis { opacity: .4; cursor: default; text-decoration: line-through; }
+  .slot-time { font-weight: 500; }
+  .slot-spots { font-size: 11px; color: #999; margin-top: 2px; }
+  .slot.sel .slot-spots { color: #378ADD; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field { margin-bottom: 1rem; }
+  .field label { display: block; font-size: 12px; color: #555; margin-bottom: 5px; }
+  .field input, .field select, .field textarea { width: 100%; font-size: 14px; padding: 8px 10px; border: 0.5px solid rgba(0,0,0,.25); border-radius: 6px; background: #fff; color: #1a1a1a; outline: none; font-family: inherit; }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: #185FA5; }
+  .field textarea { resize: vertical; min-height: 72px; }
+  .btn { background: #185FA5; color: #fff; border: none; border-radius: 8px; padding: 11px 20px; font-size: 14px; font-weight: 500; cursor: pointer; width: 100%; transition: opacity .15s; font-family: inherit; }
+  .btn:hover { opacity: .85; }
+  .btn:disabled { opacity: .35; cursor: default; }
+  .btn-back { background: none; border: 0.5px solid rgba(0,0,0,.25); border-radius: 8px; padding: 8px 16px; font-size: 13px; cursor: pointer; color: #555; margin-bottom: 1rem; font-family: inherit; }
+  .btn-back:hover { background: #f5f4f0; }
+  .sum-card { background: #f5f4f0; border-radius: 10px; padding: .9rem 1.1rem; margin-bottom: 1.25rem; }
+  .sum-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; }
+  .sum-row:not(:last-child) { border-bottom: 0.5px solid rgba(0,0,0,.1); }
+  .sum-lbl { color: #666; }
+  .sum-val { font-weight: 500; color: #1a1a1a; }
+  .success-wrap { text-align: center; padding: 2rem 0; }
+  .check-circle { width: 52px; height: 52px; background: #EAF3DE; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Confiserie Afchain</h1>
+  <p>Réservez votre visite de la confiserie</p>
+</div>
+
+<div class="card">
+  <div class="step-dots">
+    <div class="dot on" id="d1"></div>
+    <div class="dot" id="d2"></div>
+    <div class="dot" id="d3"></div>
+    <div class="dot" id="d4"></div>
+  </div>
+
+  <!-- Étape 1 : Calendrier -->
+  <div id="s1">
+    <div class="step-lbl">Étape 1 sur 4</div>
+    <div class="step-title">Choisissez une date</div>
+    <div class="cal-nav">
+      <button onclick="prevM()">←</button>
+      <span class="month-lbl" id="mLbl"></span>
+      <button onclick="nextM()">→</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <button class="btn" id="btn1" onclick="go(2)" disabled>Choisir un créneau →</button>
+  </div>
+
+  <!-- Étape 2 : Créneaux -->
+  <div id="s2" class="hidden">
+    <button class="btn-back" onclick="go(1)">← Retour</button>
+    <div class="step-lbl">Étape 2 sur 4</div>
+    <div class="step-title" id="s2Title">Choisissez un horaire</div>
+    <div class="slots-grid" id="slotsGrid"></div>
+    <button class="btn" id="btn2" onclick="go(3)" disabled>Continuer →</button>
+  </div>
+
+  <!-- Étape 3 : Formulaire -->
+  <div id="s3" class="hidden">
+    <button class="btn-back" onclick="go(2)">← Retour</button>
+    <div class="step-lbl">Étape 3 sur 4</div>
+    <div class="step-title">Vos informations</div>
+    <div class="form-row">
+      <div class="field"><label>Prénom</label><input type="text" id="fFirst" placeholder="Marie" oninput="chkForm()"></div>
+      <div class="field"><label>Nom</label><input type="text" id="fLast" placeholder="Dupont" oninput="chkForm()"></div>
+    </div>
+    <div class="field"><label>Email</label><input type="email" id="fEmail" placeholder="marie@exemple.fr" oninput="chkForm()"></div>
+    <div class="field"><label>Entreprise / Organisation</label><input type="text" id="fCompany" placeholder="Nom de votre structure" oninput="chkForm()"></div>
+    <div class="field"><label>Participants</label>
+      <select id="fPart" onchange="chkForm()">
+        <option value="">— Sélectionner —</option>
+        <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6-10</option><option>10+</option>
+      </select>
+    </div>
+    <div class="field"><label>Message (optionnel)</label><textarea id="fMsg" placeholder="Contexte de votre visite…"></textarea></div>
+    <button class="btn" id="btn3" onclick="go(4)" disabled>Vérifier et confirmer →</button>
+  </div>
+
+  <!-- Étape 4 : Confirmation -->
+  <div id="s4" class="hidden">
+    <button class="btn-back" onclick="go(3)">← Retour</button>
+    <div class="step-lbl">Étape 4 sur 4</div>
+    <div class="step-title">Récapitulatif</div>
+    <div class="sum-card" id="sumCard"></div>
+    <button class="btn" onclick="submit()">Confirmer la réservation</button>
+  </div>
+
+  <!-- Succès -->
+  <div id="sOk" class="hidden">
+    <div class="success-wrap">
+      <div class="check-circle">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <p style="font-size:18px;font-weight:500;margin-bottom:8px">Réservation confirmée !</p>
+      <p style="font-size:14px;color:#666;margin-bottom:2rem" id="okText"></p>
+      <button class="btn" style="max-width:240px;margin:0 auto;display:block" onclick="reset()">Nouvelle réservation</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIGURATION — à adapter si besoin
+// ============================================================
+const SCRIPT_URL = 'COLLER_ICI_URL_APPS_SCRIPT'; // URL Google Apps Script
+const SLOTS_URL  = 'COLLER_ICI_URL_APPS_SCRIPT?action=getSlots'; // même URL + ?action=getSlots
+
+const DAYS   = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+const MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const DEFAULT_TIMES = ['09:30','10:00','10:30','11:00','11:30','12:00'];
+
+let availability = {}; // { "YYYY-MM-DD": { "09:30": {active:true, spots:8, booked:0}, ... } }
+let curM = new Date(); curM.setDate(1);
+let selDate = null, selSlot = null;
+
+// Charge les disponibilités depuis Google Sheets
+async function loadAvailability() {
+  try {
+    const r = await fetch(SLOTS_URL);
+    const data = await r.json();
+    availability = data;
+  } catch(e) {
+    // Fallback : disponibilités par défaut si le script est absent
+    console.warn('Impossible de charger les disponibilités, mode démo activé.');
+  }
+}
+
+function getDay(dateStr) {
+  if (availability[dateStr]) return availability[dateStr];
+  // Génère les créneaux par défaut pour ce jour
+  const obj = {};
+  DEFAULT_TIMES.forEach(t => obj[t] = { active: true, spots: 8, booked: 0 });
+  return obj;
+}
+
+function isoDate(d) {
+  return d.toISOString().split('T')[0];
+}
+
+function renderCal() {
+  const y = curM.getFullYear(), m = curM.getMonth();
+  document.getElementById('mLbl').textContent = MONTHS[m] + ' ' + y;
+  const g = document.getElementById('calGrid');
+  g.innerHTML = DAYS.map(d => `<div class="cal-head">${d}</div>`).join('');
+  let dow = (new Date(y, m, 1).getDay() + 6) % 7;
+  for (let i = 0; i < dow; i++) g.innerHTML += `<div class="cal-day emp"></div>`;
+  const tot = new Date(y, m + 1, 0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+  for (let d = 1; d <= tot; d++) {
+    const dd = new Date(y, m, d);
+    const isSat = dd.getDay() === 6, isSun = dd.getDay() === 0, isPast = dd < today;
+    const dis = isSat || isSun || isPast;
+    // Vérifie si au moins un créneau est dispo ce jour
+    const ds = isoDate(dd);
+    const daySlots = getDay(ds);
+    const hasSlot = Object.values(daySlots).some(s => s.active && s.spots - s.booked > 0);
+    const isSel = selDate && dd.toDateString() === selDate.toDateString();
+    const cls = dis ? 'dis' : (!hasSlot ? 'dis' : (isSel ? 'sel' : ''));
+    g.innerHTML += `<div class="cal-day ${cls}" onclick="pickDay(${d})">${d}</div>`;
+  }
+}
+
+function pickDay(d) {
+  const dd = new Date(curM.getFullYear(), curM.getMonth(), d);
+  const today = new Date(); today.setHours(0,0,0,0);
+  if (dd < today || dd.getDay() === 0 || dd.getDay() === 6) return;
+  selDate = dd; selSlot = null;
+  renderCal();
+  document.getElementById('btn1').disabled = false;
+}
+
+function prevM() { curM.setMonth(curM.getMonth() - 1); renderCal(); }
+function nextM() { curM.setMonth(curM.getMonth() + 1); renderCal(); }
+
+function renderSlots() {
+  const opts = { weekday: 'long', day: 'numeric', month: 'long' };
+  document.getElementById('s2Title').textContent = 'Créneaux du ' + selDate.toLocaleDateString('fr-FR', opts);
+  const ds = isoDate(selDate);
+  const daySlots = getDay(ds);
+  const g = document.getElementById('slotsGrid');
+  g.innerHTML = Object.entries(daySlots).map(([time, s]) => {
+    if (!s.active) return '';
+    const avail = s.spots - s.booked;
+    const full = avail <= 0;
+    const isSel = selSlot === time;
+    return `<div class="slot${full ? ' dis' : ''}${isSel ? ' sel' : ''}" onclick="pickSlot('${time}')">
+      <div class="slot-time">${time}</div>
+      <div class="slot-spots">${full ? 'Complet' : avail + ' place' + (avail > 1 ? 's' : '')}</div>
+    </div>`;
+  }).join('');
+}
+
+function pickSlot(time) {
+  const ds = isoDate(selDate);
+  const s = getDay(ds)[time];
+  if (!s || !s.active || s.spots - s.booked <= 0) return;
+  selSlot = time;
+  renderSlots();
+  document.getElementById('btn2').disabled = false;
+}
+
+function chkForm() {
+  const ok = document.getElementById('fFirst').value.trim() &&
+    document.getElementById('fLast').value.trim() &&
+    document.getElementById('fEmail').value.includes('@') &&
+    document.getElementById('fCompany').value.trim() &&
+    document.getElementById('fPart').value;
+  document.getElementById('btn3').disabled = !ok;
+}
+
+function renderSum() {
+  const opts = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+  const rows = [
+    ['Date', selDate.toLocaleDateString('fr-FR', opts)],
+    ['Horaire', selSlot + ' – ~1h30'],
+    ['Nom', document.getElementById('fFirst').value + ' ' + document.getElementById('fLast').value],
+    ['Email', document.getElementById('fEmail').value],
+    ['Société', document.getElementById('fCompany').value],
+    ['Participants', document.getElementById('fPart').value],
+  ];
+  document.getElementById('sumCard').innerHTML = rows.map(([l, v]) =>
+    `<div class="sum-row"><span class="sum-lbl">${l}</span><span class="sum-val">${v}</span></div>`
+  ).join('');
+}
+
+function go(n) {
+  [1, 2, 3, 4].forEach(i => {
+    document.getElementById('s' + i).classList.toggle('hidden', i !== n);
+    document.getElementById('d' + i).classList.toggle('on', i <= n);
+  });
+  document.getElementById('sOk').classList.add('hidden');
+  if (n === 2) renderSlots();
+  if (n === 4) renderSum();
+}
+
+async function submit() {
+  const payload = {
+    action: 'addBooking',
+    date: isoDate(selDate),
+    time: selSlot,
+    first: document.getElementById('fFirst').value,
+    last: document.getElementById('fLast').value,
+    email: document.getElementById('fEmail').value,
+    company: document.getElementById('fCompany').value,
+    participants: document.getElementById('fPart').value,
+    message: document.getElementById('fMsg').value,
+  };
+  try {
+    await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
+  } catch(e) { console.warn('Envoi échoué, mode démo.'); }
+  const opts = { day: 'numeric', month: 'long' };
+  document.getElementById('okText').textContent =
+    'Un email de confirmation sera envoyé à ' + payload.email +
+    '. Nous vous attendons le ' + selDate.toLocaleDateString('fr-FR', opts) + ' à ' + selSlot + '.';
+  [1, 2, 3, 4].forEach(i => document.getElementById('s' + i).classList.add('hidden'));
+  document.getElementById('sOk').classList.remove('hidden');
+  document.querySelectorAll('.dot').forEach(d => d.classList.add('on'));
+}
+
+function reset() {
+  selDate = null; selSlot = null;
+  curM = new Date(); curM.setDate(1);
+  ['fFirst','fLast','fEmail','fCompany','fMsg'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fPart').value = '';
+  renderCal();
+  go(1);
+  document.getElementById('btn1').disabled = true;
+  document.getElementById('btn2').disabled = true;
+  document.getElementById('btn3').disabled = true;
+}
+
+loadAvailability().then(() => renderCal());
+</script>
+</body>
+</html>
