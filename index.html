@@ -154,12 +154,13 @@ let selDate = null, selSlot = null;
 // Charge les disponibilités depuis Google Sheets
 async function loadAvailability() {
   try {
-    const r = await fetch(SLOTS_URL);
+    // On ajoute un "timestamp" à la fin de l'URL pour empêcher le cache
+    const r = await fetch(SLOTS_URL + '&t=' + Date.now()); 
     const data = await r.json();
     availability = data;
+    renderCal(); // On force le rafraîchissement du calendrier
   } catch(e) {
-    // Fallback : disponibilités par défaut si le script est absent
-    console.warn('Impossible de charger les disponibilités, mode démo activé.');
+    console.warn('Mode démo activé.');
   }
 }
 
