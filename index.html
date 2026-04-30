@@ -54,6 +54,31 @@
   .success-wrap { text-align: center; padding: 2rem 0; }
   .check-circle { width: 52px; height: 52px; background: #EAF3DE; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; }
   .hidden { display: none; }
+ /* Animation du rond de chargement */
+.spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 0.8s linear infinite;
+  margin-left: 10px;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Style pour le bouton en cours de chargement */
+.btn-loading {
+  opacity: 0.7;
+  cursor: not-allowed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 </style>
 </head>
 <body>
@@ -273,6 +298,14 @@ function go(n) {
 }
 
 async function submit() {
+  // 1. Récupérer le bouton et préparer l'état de chargement
+  const btn = document.querySelector('#s4 .btn');
+  const originalText = btn.innerHTML;
+  
+  btn.disabled = true;
+  btn.classList.add('btn-loading');
+  btn.innerHTML = `Traitement en cours... <span class="spinner"></span>`;
+
   const payload = {
     action: 'addBooking',
     date: isoDate(selDate),
@@ -284,16 +317,34 @@ async function submit() {
     participants: document.getElementById('fPart').value,
     message: document.getElementById('fMsg').value,
   };
+
   try {
-    await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload), mode: 'no-cors' });
-  } catch(e) { console.warn('Envoi échoué, mode démo.'); }
-  const opts = { day: 'numeric', month: 'long' };
-  document.getElementById('okText').textContent =
-    'Un email de confirmation sera envoyé à ' + payload.email +
-    '. Nous vous attendons le ' + selDate.toLocaleDateString('fr-FR', opts) + ' à ' + selSlot + '.';
-  [1, 2, 3, 4].forEach(i => document.getElementById('s' + i).classList.add('hidden'));
-  document.getElementById('sOk').classList.remove('hidden');
-  document.querySelectorAll('.dot').forEach(d => d.classList.add('on'));
+    // 2. Envoi des données (l'attente se fait ici)
+    await fetch(SCRIPT_URL, { 
+      method: 'POST', 
+      body: JSON.stringify(payload), 
+      mode: 'no-cors' 
+    });
+
+    // 3. Affichage du succès
+    const opts = { day: 'numeric', month: 'long' };
+    document.getElementById('okText').textContent =
+      'Un email de confirmation sera envoyé à ' + payload.email +
+      '. Nous vous attendons le ' + selDate.toLocaleDateString('fr-FR', opts) + ' à ' + selSlot + '.';
+    
+    [1, 2, 3, 4].forEach(i => document.getElementById('s' + i).classList.add('hidden'));
+    document.getElementById('sOk').classList.remove('hidden');
+    document.querySelectorAll('.dot').forEach(d => d.classList.add('on'));
+
+  } catch(e) {
+    console.warn('Envoi échoué');
+    alert("Une erreur est survenue lors de la réservation. Veuillez réessayer.");
+    
+    // Remettre le bouton à l'état normal en cas d'erreur
+    btn.disabled = false;
+    btn.classList.remove('btn-loading');
+    btn.innerHTML = originalText;
+  }
 }
 
 function reset() {
